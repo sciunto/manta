@@ -3,23 +3,16 @@
 
 
 import threading
-import time
-import logging
-import random
 import queue as Queue
-
+import time
+import datetime
 import os
+import logging
+
 import pymba as pb
 import numpy as np
 import cv2
 import imageio
-
-import time
-import datetime
-
-from skimage import data
-import matplotlib.pyplot as plt
-
 
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s',)
@@ -27,10 +20,10 @@ logging.basicConfig(level=logging.DEBUG,
 BUF_SIZE = 1000
 q = Queue.Queue(BUF_SIZE)
 
-class ProducerThread(threading.Thread):
+class GrabberThread(threading.Thread):
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, verbose=None):
-        super(ProducerThread,self).__init__()
+        super(GrabberThread,self).__init__()
         self.target = target
         self.name = name
         self.event = args[0]
@@ -70,17 +63,18 @@ class ProducerThread(threading.Thread):
                                  dtype=np.uint8,
                                  shape=(self.frame.height, self.frame.width, 1))
 
-                    #cv2.imshow("test", img)
+                    #cv2.imshow('Viewer', img)
                     q.put((self.framenumber, img, time.perf_counter()))
                     logging.debug('Putting ' + ' : ' + str(q.qsize()) + ' items in queue')
                     self.framenumber += 1
 
         return
 
-class ConsumerThread(threading.Thread):
+
+class WriterThread(threading.Thread):
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, verbose=None):
-        super(ConsumerThread,self).__init__()
+        super(WriterThread, self).__init__()
         self.target = target
         self.name = name
         self.event = args[0]
@@ -91,7 +85,7 @@ class ConsumerThread(threading.Thread):
         global display_img
         while True:
             if not self.event.is_set() and q.empty():
-                logging.debug('End of the consumer loop')
+                logging.debug('End of the writer loop')
                 break
             if not q.empty():
                 num, img, time_counter = q.get()
@@ -170,10 +164,10 @@ if __name__ == '__main__':
 
         run_event = threading.Event()
         run_event.set()
-        p = ProducerThread(name='producer', args=(run_event, frame, c0))
-        c = ConsumerThread(name='consumer', args=(run_event,))
+        p = GrabberThread(name='grabber', args=(run_event, frame, c0))
+        c = WriterThread(name='writer', args=(run_event,))
 
-        cv2.namedWindow("test")
+        cv2.namedWindow('Viewer')
         p.start()
         #time.sleep(10)
         c.start()
@@ -183,7 +177,7 @@ if __name__ == '__main__':
 
         try:
             while True:
-                cv2.imshow("test", display_img)
+                cv2.imshow('Viewer', display_img)
                 # This has the role of a time.sleep() call
                 cv2.waitKey(1)
         except KeyboardInterrupt:
