@@ -10,9 +10,7 @@ import os
 import logging
 
 import pymba as pb
-import numpy as np
 import cv2
-import imageio
 
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s',)
@@ -47,7 +45,7 @@ class GrabberThread(threading.Thread):
                 self.c0.runFeatureCommand("AcquisitionStart")
                 self.c0.runFeatureCommand("AcquisitionStop")
                 self.frame.waitFrameCapture(1000)
-                frame_data = self.frame.getBufferByteData()
+                #frame_data = self.frame.getBufferByteData()
 
                 if success:
 
@@ -55,16 +53,18 @@ class GrabberThread(threading.Thread):
                     time_in_ms = int(time.perf_counter() * 1000)
                     duration = time_in_ms - self.prev_time_in_ms
                     self.prev_time_in_ms = time_in_ms
-                    logging.debug('Frame duration: %f, %f', duration, 1/(duration * 1e-3))
+                    logging.debug('Frame duration: %f', duration) #, 1/(duration * 1e-3))
 
 
+                    img = self.frame.getImage()
+                     
+#                    img = np.ndarray(buffer=frame_data,
+#                                 dtype=np.uint8,
+#                                 shape=(self.frame.height, self.frame.width, 1))
 
-                    img = np.ndarray(buffer=frame_data,
-                                 dtype=np.uint8,
-                                 shape=(self.frame.height, self.frame.width, 1))
-
-                    #cv2.imshow('Viewer', img)
-                    q.put((self.framenumber, img, time.perf_counter()))
+                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
+                    # self.frame.getTimestamp()  # What's the unit???
+                    q.put((self.framenumber, img, time.perf_counter(), timestamp))
                     logging.debug('Putting ' + ' : ' + str(q.qsize()) + ' items in queue')
                     self.framenumber += 1
 
@@ -88,7 +88,7 @@ class WriterThread(threading.Thread):
                 logging.debug('End of the writer loop')
                 break
             if not q.empty():
-                num, img, time_counter = q.get()
+                num, img, time_counter, timestamp = q.get()
                 display_img = img
                 filename = str(num).zfill(8) + '.png'
                 logging.debug('Getting '
@@ -98,7 +98,7 @@ class WriterThread(threading.Thread):
                 prev_time_in_ms = int(time.perf_counter() * 1000)
                 cv2.imwrite(os.path.join(datadir, filename), img)
                 with open(os.path.join(datadir, 'metadata.txt'), 'a') as metadata:
-                    metadata.write(f'{num} {time_counter} {filename}\n')
+                    metadata.write(f'{filename} {timestamp} {num} {time_counter}\n')
                 # Timer
                 time_in_ms = int(time.perf_counter() * 1000)
                 duration = time_in_ms - prev_time_in_ms
@@ -107,8 +107,9 @@ class WriterThread(threading.Thread):
                 if self.event.is_set():
                     # Wait a little to avoid emptying the queue
                     # and slowing down the process
-                    if 45 - duration > 0:
-                        time.sleep((45 - duration) * 1e-3)
+                    waiting_time = 150
+                    if waiting_time - duration > 0:
+                        time.sleep((waiting_time - duration) * 1e-3)
                     else:
                         time.sleep(25 * 1e-3)
 
@@ -132,11 +133,13 @@ if __name__ == '__main__':
 
         camera_ids = vimba.getCameraIds()
 
+
         for cam_id in camera_ids:
             print('Camera found: ', cam_id)
 
         c0 = vimba.getCamera(camera_ids[0])
-        c0.openCamera()
+        c0.openCamera(cameraAccessMode=1)
+
 
         try:
             # gigE camera
