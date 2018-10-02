@@ -15,7 +15,7 @@ import cv2
 logging.basicConfig(level=logging.DEBUG,
                     format='(%(threadName)-9s) %(message)s',)
 
-BUF_SIZE = 1000
+BUF_SIZE = 2000
 q = Queue.Queue(BUF_SIZE)
 
 class GrabberThread(threading.Thread):
@@ -30,6 +30,8 @@ class GrabberThread(threading.Thread):
 
         self.framenumber = 0
         self.prev_time_in_ms = 0
+        self.img = None
+        self.timestamp = None
 
     def run(self):
 
@@ -56,15 +58,15 @@ class GrabberThread(threading.Thread):
                     logging.debug('Frame duration: %f', duration) #, 1/(duration * 1e-3))
 
 
-                    img = self.frame.getImage()
+                    self.img = self.frame.getImage()
                      
 #                    img = np.ndarray(buffer=frame_data,
 #                                 dtype=np.uint8,
 #                                 shape=(self.frame.height, self.frame.width, 1))
 
-                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
+                    self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
                     # self.frame.getTimestamp()  # What's the unit???
-                    q.put((self.framenumber, img, time.perf_counter(), timestamp))
+                    q.put((self.framenumber, self.img.copy(), time.perf_counter(), self.timestamp))
                     logging.debug('Putting ' + ' : ' + str(q.qsize()) + ' items in queue')
                     self.framenumber += 1
 
@@ -107,7 +109,7 @@ class WriterThread(threading.Thread):
                 if self.event.is_set():
                     # Wait a little to avoid emptying the queue
                     # and slowing down the process
-                    waiting_time = 150
+                    waiting_time = 50
                     if waiting_time - duration > 0:
                         time.sleep((waiting_time - duration) * 1e-3)
                     else:
