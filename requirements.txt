@@ -1,2 +1,1 @@
-pymba
 opencv-python
