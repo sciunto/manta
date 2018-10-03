@@ -115,27 +115,24 @@ class WriterThread(threading.Thread):
                         time.sleep((waiting_time - duration) * 1e-3)
                     else:
                         time.sleep(25 * 1e-3)
-
-
         return
 
 
 if __name__ == '__main__':
 
+    output_dir = os.path.abspath(r'E:\data')
 
     date = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss')
-    datadir = os.path.join(os.path.abspath('E:\\data'), date)
+    datadir = os.path.join(output_dir, date)
     os.makedirs(datadir, exist_ok=True)
 
 
     with pb.Vimba() as vimba:
         system = vimba.getSystem()
-
         system.runFeatureCommand('GeVDiscoveryAllOnce')
         time.sleep(0.2)
 
         camera_ids = vimba.getCameraIds()
-
 
         for cam_id in camera_ids:
             print('Camera found: ', cam_id)
