@@ -18,10 +18,11 @@ logging.basicConfig(level=logging.DEBUG,
 BUF_SIZE = 2000
 q = Queue.Queue(BUF_SIZE)
 
+
 class GrabberThread(threading.Thread):
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, verbose=None):
-        super(GrabberThread,self).__init__()
+        super(GrabberThread, self).__init__()
         self.target = target
         self.name = name
         self.event = args[0]
@@ -55,8 +56,7 @@ class GrabberThread(threading.Thread):
                     time_in_ms = int(time.perf_counter() * 1000)
                     duration = time_in_ms - self.prev_time_in_ms
                     self.prev_time_in_ms = time_in_ms
-                    logging.debug('Frame duration: %f', duration) #, 1/(duration * 1e-3))
-
+                    logging.debug('Frame duration: %f', duration)
 
                     self.img = self.frame.getImage()
 
@@ -165,8 +165,6 @@ if __name__ == '__main__':
         frame.announceFrame()
 
         c0.startCapture()
-
-
 
         run_event = threading.Event()
         run_event.set()
