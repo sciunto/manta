@@ -59,7 +59,7 @@ class GrabberThread(threading.Thread):
 
 
                     self.img = self.frame.getImage()
-                     
+
 #                    img = np.ndarray(buffer=frame_data,
 #                                 dtype=np.uint8,
 #                                 shape=(self.frame.height, self.frame.width, 1))
@@ -99,7 +99,8 @@ class WriterThread(threading.Thread):
                 #imageio.imsave(os.path.join(datadir, filename), img, format='png')
                 prev_time_in_ms = int(time.perf_counter() * 1000)
                 cv2.imwrite(os.path.join(datadir, filename), img)
-                with open(os.path.join(datadir, 'metadata.txt'), 'a') as metadata:
+                with open(os.path.join(datadir, 'metadata.txt'), 'a',
+                          encoding='utf8') as metadata:
                     metadata.write(f'{filename} {timestamp} {num} {time_counter}\n')
                 # Timer
                 time_in_ms = int(time.perf_counter() * 1000)
