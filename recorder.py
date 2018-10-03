@@ -171,7 +171,7 @@ if __name__ == '__main__':
         p = GrabberThread(name='grabber', args=(run_event, frame, c0))
         c = WriterThread(name='writer', args=(run_event,))
 
-        cv2.namedWindow('Viewer')
+        cv2.namedWindow('Viewer', flags=cv2.WINDOW_NORMAL)
         p.start()
         #time.sleep(10)
         c.start()
