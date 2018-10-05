@@ -10,13 +10,8 @@ import os
 import logging
 
 import pymba as pb
+from pymba.vimba_exception import VimbaException
 import cv2
-
-logging.basicConfig(level=logging.DEBUG,
-                    format='(%(threadName)-9s) %(message)s',)
-
-BUF_SIZE = 2000
-q = Queue.Queue(BUF_SIZE)
 
 
 class GrabberThread(threading.Thread):
@@ -35,16 +30,18 @@ class GrabberThread(threading.Thread):
         self.timestamp = None
 
     def run(self):
-
+        global display_img
         while self.event.is_set():
             if not q.full():
 
                 try:
                     self.frame.queueFrameCapture()
                     success = True
-                except:
+                except VimbaException:
+                    logging.warning('Missed frame')
                     #droppedframes.append(framecount)
                     success = False
+
                 self.c0.runFeatureCommand("AcquisitionStart")
                 self.c0.runFeatureCommand("AcquisitionStop")
                 self.frame.waitFrameCapture(1000)
@@ -56,10 +53,10 @@ class GrabberThread(threading.Thread):
                     time_in_ms = int(time.perf_counter() * 1000)
                     duration = time_in_ms - self.prev_time_in_ms
                     self.prev_time_in_ms = time_in_ms
-                    logging.debug('Frame duration: %f', duration)
+                    logging.debug(f'Frame duration: {duration}')
 
                     self.img = self.frame.getImage()
-
+                    display_img = self.img.copy()
 #                    img = np.ndarray(buffer=frame_data,
 #                                 dtype=np.uint8,
 #                                 shape=(self.frame.height, self.frame.width, 1))
@@ -67,7 +64,7 @@ class GrabberThread(threading.Thread):
                     self.timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
                     # self.frame.getTimestamp()  # What's the unit???
                     q.put((self.framenumber, self.img.copy(), time.perf_counter(), self.timestamp))
-                    logging.debug('Putting ' + ' : ' + str(q.qsize()) + ' items in queue')
+                    logging.debug(f'Putting: {q.qsize()} items in queue')
                     self.framenumber += 1
 
         return
@@ -84,17 +81,16 @@ class WriterThread(threading.Thread):
         return
 
     def run(self):
-        global display_img
+        #global display_img
         while True:
             if not self.event.is_set() and q.empty():
                 logging.debug('End of the writer loop')
                 break
             if not q.empty():
                 num, img, time_counter, timestamp = q.get()
-                display_img = img
+                #display_img = img
                 filename = str(num).zfill(8) + '.png'
-                logging.debug('Getting '
-                              + ' : ' + str(q.qsize()) + ' items in queue')
+                logging.debug(f'Getting: {q.qsize()} items in queue')
 
                 #imageio.imsave(os.path.join(datadir, filename), img, format='png')
                 prev_time_in_ms = int(time.perf_counter() * 1000)
@@ -120,12 +116,19 @@ class WriterThread(threading.Thread):
 
 if __name__ == '__main__':
 
+    logging.basicConfig(level=logging.DEBUG,
+                    format='(%(threadName)-9s) %(message)s',)
+
+
     output_dir = os.path.abspath(r'E:\data')
 
     date = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss')
     datadir = os.path.join(output_dir, date)
     os.makedirs(datadir, exist_ok=True)
 
+
+    BUF_SIZE = 2000
+    q = Queue.Queue(BUF_SIZE)
 
     with pb.Vimba() as vimba:
         system = vimba.getSystem()
@@ -139,18 +142,6 @@ if __name__ == '__main__':
 
         c0 = vimba.getCamera(camera_ids[0])
         c0.openCamera(cameraAccessMode=1)
-
-
-        try:
-            # gigE camera
-            print('This is a gigE camera')
-            print(c0.GevSCPSPacketSize)
-            print(c0.StreamBytesPerSecond)
-            #c0.StreamBytesPerSecond = 20000
-        except:
-            # not a gigE camera
-            print('This is NOT a gigE camera')
-            pass
 
         time.sleep(2)
 
@@ -170,21 +161,20 @@ if __name__ == '__main__':
 
         cv2.namedWindow('Viewer', flags=cv2.WINDOW_NORMAL)
         p.start()
-        #time.sleep(10)
         c.start()
-        #time.sleep(1)
 
         time.sleep(1)
 
         try:
-            while True:
+            while cv2.getWindowProperty('Viewer', 0) >= 0:
                 cv2.imshow('Viewer', display_img)
-                # This has the role of a time.sleep() call
                 cv2.waitKey(1)
         except KeyboardInterrupt:
+            logging.debug('Catch KeyboardInterrupt')
+        finally:
             cv2.destroyAllWindows()
-            logging.debug('attempting to close threads')
+            logging.debug('Attempting to close threads')
             run_event.clear()
             p.join()
             c.join()
-            logging.debug('threads successfully closed')
+            logging.debug('Threads successfully closed')
