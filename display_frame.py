@@ -24,6 +24,7 @@ previous_time_in_ms = int(time.perf_counter() * 1000)
 counter = itertools.count(start=0, step=1)
 date = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss')
 
+
 def display_frame(frame: Frame, delay: Optional[int] = 1) -> None:
     """
     Displays the acquired frame.
@@ -37,7 +38,8 @@ def display_frame(frame: Frame, delay: Optional[int] = 1) -> None:
 
     # convert colour space if desired
     try:
-        image = cv2.cvtColor(image, PIXEL_FORMATS_CONVERSIONS[frame.pixel_format])
+        image = cv2.cvtColor(image,
+                 PIXEL_FORMATS_CONVERSIONS[frame.pixel_format])
     except KeyError:
         pass
 
@@ -46,9 +48,8 @@ def display_frame(frame: Frame, delay: Optional[int] = 1) -> None:
     cv2.waitKey(10)
     if cv2.getWindowProperty('Viewer', 0) < 0:
         raise StopIteration
-    
-    
-    
+
+
 def write_frame(frame: Frame, delay: Optional[int] = 1) -> None:
     """
     Displays the acquired frame.
@@ -63,30 +64,28 @@ def write_frame(frame: Frame, delay: Optional[int] = 1) -> None:
 
     # convert colour space if desired
     try:
-        image = cv2.cvtColor(image, PIXEL_FORMATS_CONVERSIONS[frame.pixel_format])
+        image = cv2.cvtColor(image,
+                 PIXEL_FORMATS_CONVERSIONS[frame.pixel_format])
     except KeyError:
         pass
 
     output_dir = os.path.abspath(r'E:\data')
     #date = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss')
-    #date = 'tptp'
     datadir = os.path.join(output_dir, date)
     os.makedirs(datadir, exist_ok=True)
     num = counter.__next__()
     filename = str(num).zfill(8) + '.png'
 
     print(datadir)
-    
+
     time_in_ms = int(time.perf_counter() * 1000)
     duration = time_in_ms - previous_time_in_ms
     previous_time_in_ms = time_in_ms
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
     with open(os.path.join(datadir, 'metadata.txt'), 'a',
-                          encoding='utf8') as metadata:
+              encoding='utf8') as metadata:
         metadata.write(f'{filename} {timestamp} {num} {duration}\n')
-    
-   
-    
+
     cv2.imwrite(os.path.join(datadir, filename), image)
     cv2.imshow('Viewer', image)
 
