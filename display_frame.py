@@ -50,12 +50,21 @@ def display_frame(frame: Frame, delay: Optional[int] = 1) -> None:
         raise StopIteration
 
 
-def write_frame(frame: Frame, delay: Optional[int] = 1) -> None:
+def write_frame(frame: Frame, time_interval: Optional[int] = None, 
+                delay: Optional[int] = 1) -> None:
     """
     Displays the acquired frame.
     :param frame: The frame object to display.
+    :param time_inerval: Duration between each frame in ms
     :param delay: Display delay in milliseconds, use 0 for indefinite.
     """
+    
+    #time_interval = 1000 # ms
+    
+    # TODO
+    output_dir = os.path.abspath(r'E:\data')
+    
+    
     global previous_time_in_ms
     print(f'frame {frame.data.frameID}')
 
@@ -69,18 +78,25 @@ def write_frame(frame: Frame, delay: Optional[int] = 1) -> None:
     except KeyError:
         pass
 
-    output_dir = os.path.abspath(r'E:\data')
+    
     #date = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss')
     datadir = os.path.join(output_dir, date)
     os.makedirs(datadir, exist_ok=True)
     num = counter.__next__()
     filename = str(num).zfill(8) + '.png'
 
-    print(datadir)
-
+    time_in_ms = int(time.perf_counter() * 1000)
+    
+    if time_interval:
+        # handle the case for the first image, which is particularly slow...
+        duration = time_in_ms - previous_time_in_ms
+        if time_interval - duration > 0:
+            time.sleep((time_interval - duration) / 1000.)
+    
     time_in_ms = int(time.perf_counter() * 1000)
     duration = time_in_ms - previous_time_in_ms
     previous_time_in_ms = time_in_ms
+    
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%Hh%Mm%Ss%fµs')
     with open(os.path.join(datadir, 'metadata.txt'), 'a',
               encoding='utf8') as metadata:
